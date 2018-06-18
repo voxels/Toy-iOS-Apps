@@ -1,0 +1,116 @@
+1.  What is the piece of code, you’ve written in Objective-C or Swift, of which you are most
+proud? Please post a link (or attach the code).
+
+There are a few candidates for the best pieces of code that I've written that are each based on the goal of real-time, direct memory manipulation of streaming image data in order to capture, analyze, alter, and transmit the results across devices.  For me, moving photons of light into space at the expected time and position, in the expected frequency and amplitude, out of this abstract idea of memory manipulation through dynamic math approaches the kind of control over reality that I'd like to see in my lifetime.  It feels like an accomplishment to have all those bits flying around and landing in the right spot.  
+
+One example of the work I've done to explore these possibilities was to run the incoming frames from a home-made infrared camera through OpenCV to capture the keypoints and contours and pass that information along to SpriteKit, a game engine for 2D graphics that provides some convenience to handling the GPU.  The method I've copied below demonstrates the pivot point between the incoming sample buffer and the outgoing data arrays that are then used to add live graphical elements to the image, which can then be projected back into the space.  Taken to it's logical extreme by adding a depth buffer and expropriospecific analysis, I think this work anticipates some of the more interesting conclusions of virtual reality and mixed reality.
+
+#pragma mark - Detection
+
+- (void) toSingleChannel:(CMSampleBufferRef)sampleBuffer
+{
+    CVImageBufferRef imageBuffer =  CMSampleBufferGetImageBuffer(sampleBuffer);
+    CVPixelBufferLockBaseAddress(imageBuffer, 0);
+    
+    size_t width = CVPixelBufferGetWidthOfPlane(imageBuffer, 0);
+    size_t height = CVPixelBufferGetHeightOfPlane(imageBuffer, 0);
+    
+    size_t bytesPerRow = CVPixelBufferGetBytesPerRowOfPlane(imageBuffer, 0);
+    
+    Pixel_8 *lumaBuffer = (Pixel_8*)CVPixelBufferGetBaseAddressOfPlane(imageBuffer, 0);
+    
+#if FLIPIMAGE
+    
+    const vImage_Buffer imagebuf = {lumaBuffer, height, width, bytesPerRow};
+    unsigned char *makeBuf = (unsigned char *)malloc( width * height * bytesPerRow );
+    const vImage_Buffer outbuf = {makeBuf, height, width, bytesPerRow};
+    
+    vImage_Flags flags = 0; // Flags for vImage function
+    vImage_Error err = vImageHorizontalReflect_Planar8(&imagebuf, &outbuf,
+                                                        flags  );
+    if (err!=kvImageNoError)
+    {
+        NSLog(@"vImageHorizontalReflect_Planar8 exited with code %ld",err);
+    }
+
+    cv::Mat grayImage((int)outbuf.height, (int)outbuf.width, CV_8U, outbuf.data, outbuf.rowBytes);
+    cv::Mat croppedRef(grayImage, cv::Rect(1920.f/2.f - 1280.f/2.f, 1080.f/2.f - 800.f/2.f, 1280.f, 800.f ));
+    cv::resize(grayImage, grayImage, cv::Size(640, 400));
+    
+    detect(grayImage, &keyPoints, &approxContours );
+    
+    free(makeBuf);
+#else
+    vImage_Buffer imagebuf = {lumaBuffer, height, width, bytesPerRow};
+    cv::Mat grayImage((int)imagebuf.height, (int)imagebuf.width, CV_8U, imagebuf.data, imagebuf.rowBytes);
+    cv::Mat croppedRef(grayImage, cv::Rect(1920.f/2.f - 1280.f/2.f, 1080.f/2.f - 800.f/2.f, 1280.f, 800.f ));
+    cv::resize(grayImage, grayImage, cv::Size(640, 400));
+    
+    detect(grayImage, &keyPoints, &approxContours );
+#endif
+    
+    cv::vector<cv::KeyPoint>::iterator it;
+    
+    NSMutableArray *keypointsArray = [[NSMutableArray alloc] init];
+    for( it= keyPoints.begin(); it!= keyPoints.end();it++)
+    {
+        Keypoint *thisKeypoint = [[Keypoint alloc] init];
+        thisKeypoint.angle = it->angle;
+        thisKeypoint.class_id = it->class_id;
+        thisKeypoint.octave = it->octave;
+        thisKeypoint.pt = CGPointMake(it->pt.x, it->pt.y);
+        thisKeypoint.response = it->response;
+        thisKeypoint.size = it->size;
+        [keypointsArray addObject:thisKeypoint];
+    }
+
+    NSMutableArray *contoursArray = [NSMutableArray array];
+    for ( cv::vector<cv::vector<cv::Point> >::iterator it1 = approxContours.begin(); it1 != approxContours.end(); ++it1 )
+    {
+        NSMutableArray *contourPoints = [NSMutableArray array];
+        
+        for ( std::vector<cv::Point>::iterator it2 = (*it1).begin(); it2 != (*it1).end(); ++ it2 )
+        {
+            NSPoint thisPoint = CGPointMake( it2->x, it2->y );
+            [contourPoints addObject:[NSValue valueWithPoint:thisPoint]];
+        }
+        NSDictionary *contourDict = @{@"points": contourPoints};
+        [contoursArray addObject:contourDict];
+    }
+    
+    [[NSOperationQueue mainQueue] addOperationWithBlock:^{
+        if( [self.delegate respondsToSelector:@selector(captureModelDidFindKeypoints:)] )
+        {
+            [self.delegate captureModelDidFindKeypoints:keypointsArray];
+        }
+        
+        if( [self.delegate respondsToSelector:@selector(captureModelDidFindContours:)] )
+        {
+            [self.delegate captureModelDidFindContours:contoursArray];
+        }
+    }];
+    
+    CVPixelBufferUnlockBaseAddress( imageBuffer, 0 );
+    
+    cv::vector< cv::KeyPoint>().swap(keyPoints);
+    cv::vector< cv::vector <cv::Point> >().swap(approxContours);
+    grayImage.release();
+    croppedRef.release();
+    //    CGContextRelease(context);
+}
+
+2.  What is your favourite language feature of Obj-C or Swift?  (Please explain)
+
+I've fallen in love with the 'guard' statement in Swift because it provides both simple readablity and graceful failure options in one clean line. Guard brings together the conditions of failure and success into a human-friendly implementation that avoids the use of nested if-statements. As I've become more and more reliant on the Golden Path style of logic, guard has become a key tool to protect against future changes in the code that might otherwise cause unfortunate failures. 
+
+3.  What frustrates you the most about Obj-C or Swift?  (Please explain)
+
+Lately I've been frustrated by the friction between the interoperability of Swift and other C-based languages.  Having the ability to call C methods from Objective-C was useful when solving some types of hard problems related to the GPU, and every so often there is a C or C++ based library that would be perfect for inclusion but too much trouble to wrap.  The Objective-C bridging header hasn't been a straightforward path between C or C++ and Swift in my experience, and I suspect there could be better compiler optimizations to allow for inclusion of the huge bodies of work done in other languages.
+
+4.  What was the toughest bug you encountered while developing for the iOS/macOS platform, and how did you track it down?
+
+The toughest bug I've encountered was a memory leak when sampling the framebuffer out of the Metal context.  Even though the language and compiler take care of the vast majority of resource collection, there is at least one case where a leak seems to be happening inside of the Metal framework itself.  Documentation for these kinds of methods is virtually non-existent, so the best you can hope for is using Instruments to track the leak and poke around in the code until you can plug it... or report it back to Apple and hope for the best.
+
+5.  Describe one of your favourite features of Xcode?
+
+My favorite feature of XCode is currently the visual debugger for UIKit.  I love pulling up the nested view hierarchy to find out where a constraint is ambiguous at run time or whether a view is sitting in the right order.  I also love having one step to print out runtime information like a view's frame. The visual debugger seems to anticipate the future of coding, along with Playgrounds, where instant, interactive feedback loops move code generation beyond the keyboard.

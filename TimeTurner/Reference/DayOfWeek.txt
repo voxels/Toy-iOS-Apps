@@ -1,0 +1,18 @@
+// https://teamtreehouse.com/community/get-the-day-of-the-week-swift
+
+let date = NSDate()
+let calendar = NSCalendar.currentCalendar()
+let components = calendar.components(.CalendarUnitHour | .CalendarUnitMinute | .CalendarUnitMonth | .CalendarUnitYear | .CalendarUnitDay, fromDate: date)
+let hour = components.hour
+let minutes = components.minute
+let month = components.month
+let year = components.year
+let day = components.day
+
+
+// http://stackoverflow.com/questions/25533147/get-day-of-week-using-nsdate-swift
+extension Date {
+    func dayNumberOfWeek() -> Int? {
+        return Calendar.current.dateComponents([.weekday], from: self).weekday 
+    }
+}

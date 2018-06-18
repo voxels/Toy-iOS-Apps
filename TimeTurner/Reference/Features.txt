@@ -1,0 +1,9 @@
+Prioritized Feature List:
+	* xibless
+	- about / code contribution
+	- sharing
+	* localization / language
+	* alternative calendars
+	- style guide
+	
+	
