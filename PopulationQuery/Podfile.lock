@@ -1,0 +1,27 @@
+PODS:
+  - Bugsnag (5.15.6)
+  - Keys (1.0.1)
+  - OCMock (3.4.1)
+
+DEPENDENCIES:
+  - Bugsnag
+  - Keys (from `Pods/CocoaPodsKeys`)
+  - OCMock (~> 3.4)
+
+SPEC REPOS:
+  https://github.com/cocoapods/specs.git:
+    - Bugsnag
+    - OCMock
+
+EXTERNAL SOURCES:
+  Keys:
+    :path: Pods/CocoaPodsKeys
+
+SPEC CHECKSUMS:
+  Bugsnag: 7382eb9b85b46e369be536bf08267a91a56d2753
+  Keys: a576f4c9c1c641ca913a959a9c62ed3f215a8de9
+  OCMock: 2cd0716969bab32a2283ff3a46fd26a8c8b4c5e3
+
+PODFILE CHECKSUM: 902f5ec9bf7603d2f6b96d744e24d7030e712e39
+
+COCOAPODS: 1.5.3
