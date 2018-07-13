@@ -39,3 +39,10 @@ The PopulationQuery project demonstrates:
 - Usage of interface builder
 - Usage of cocoapods-keys to hide API keys
 - Unit tests using XCTest and OCMock
+
+
+## CUITouchTarget
+
+CUITouchTarget is designed to intercept the touches from a UIViewController and send those to an Objective C++ app that detects a double tap gesture.  The project demostrates:
+- Usage of Objective C++
+- Calculation of a double tap gesture
